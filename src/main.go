@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -14,6 +15,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/briandowns/spinner"
 )
+
+var failedReading []string
+var failedDiretory map[string]bool
+var failedCreating []string
+var failedWriting []string
 
 type GetObjectsReturnType struct {
 	Files             []string
@@ -38,13 +44,18 @@ func main() {
 		fetchCompleted = (objects.ContinuationToken == nil)
 	}
 	log.Printf("Total count: %d", len(files))
+	for i, j := 0, len(files)-1; i < j; i, j = i+1, j-1 {
+		files[i], files[j] = files[j], files[i]
+	}
 
-	spinner := spinner.New(spinner.CharSets[41], 100*time.Millisecond)
-	spinner.Suffix = "Saving files..."
+	spinner := spinner.New(spinner.CharSets[40], 100*time.Millisecond)
+	spinner.Suffix = " Saving files..."
 	spinner.Start()
 	defer spinner.Stop()
-	time.Sleep(2 * time.Second)
-
+	defer printStringList(failedReading)
+	defer printStringList(failedCreating)
+	defer printStringList(failedWriting)
+	defer printMap(failedDiretory)
 	for _, file := range files {
 		err = SaveObject(client, file)
 		if err != nil {
@@ -89,23 +100,43 @@ func SaveObject(client *s3.Client, filePath string) (err error) {
 }
 
 func AsyncSaveFile(object *s3.GetObjectOutput, path string) {
+
 	bytes, err := io.ReadAll(object.Body)
 	if err != nil {
+		failedReading = append(failedReading, path)
 		return
 	}
-	fullPath := filepath.Join(os.Getenv("SAVING_DIRECTORY"), path)
-	file, err := os.Create(fullPath)
-
-	defer file.Close()
+	directory := filepath.Join(os.Getenv("SAVING_DIRECTORY"), filepath.Dir(path))
+	err = os.MkdirAll(directory, os.ModePerm)
 	if err != nil {
+		failedDiretory[directory] = true
 		return
 	}
+	fullPath := filepath.Join(directory, filepath.Base(path))
+	file, err := os.Create(fullPath)
+	if err != nil {
+		failedCreating = append(failedCreating, path)
+		return
+	}
+	defer file.Close()
 	_, err = file.Write(bytes)
 	if err != nil {
+		failedWriting = append(failedWriting, path)
 		return
 	}
 }
 
+func printStringList(list []string) {
+	for _, file := range list {
+		fmt.Println(file)
+	}
+}
+
+func printMap(m map[string]bool) {
+	for k := range m {
+		fmt.Println(k)
+	}
+}
 func initializeClient() (client *s3.Client, err error) {
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
