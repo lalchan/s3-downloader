@@ -14,4 +14,4 @@ Required envs:
 
 `AWS_ENDPOINT_URL`
 
-`SAVING_DIRECTORY `# (absolute path)
+`SAVING_DIRECTORY //absolute path`
