@@ -1,5 +1,6 @@
-**_ S3 Downloader _**
-This project downloads everything from an s3-sdk compatibe bucket.
+** S3 Downloader **
+
+This project downloads everything from an s3-sdk compatible bucket.
 
 Required envs:
 
