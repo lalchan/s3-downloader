@@ -1,4 +1,4 @@
-** S3 Downloader **
+# S3 Downloader
 
 This project downloads everything from an s3-sdk compatible bucket.
 
