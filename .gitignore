@@ -1,3 +1,4 @@
 files
 .envrc
 go.sum
+.DS_Store
